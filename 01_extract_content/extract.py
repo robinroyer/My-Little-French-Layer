@@ -1,19 +1,35 @@
-import os
 import json
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from langchain_community.document_loaders import PyPDFLoader
+import fitz  # PyMuPDF - much faster than pypdf
+from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
+
+def extract_text_fast(file_path):
+    """Extract text from PDF using PyMuPDF (fast)."""
+    docs = []
+    pdf = fitz.open(file_path)
+    for page_num in range(len(pdf)):
+        page = pdf[page_num]
+        text = page.get_text("text")
+        if text.strip():  # Skip empty pages
+            docs.append(Document(
+                page_content=text,
+                metadata={"source": str(file_path), "page": page_num}
+            ))
+    pdf.close()
+    return docs
+
+
 def process_legal_pdfs(file_path):
-    # Load the PDF
-    loader = PyPDFLoader(file_path)
-    docs = loader.load()
-    
+    """Load PDF and split into chunks."""
+    docs = extract_text_fast(file_path)
+
     # Split text into manageable chunks
     # Laws need context, so we use a decent overlap
     text_splitter = RecursiveCharacterTextSplitter(
-        separators = ["\n\n", "\n", " ", ""],
+        separators=["\n\n", "\n", " ", ""],
         chunk_size=1000,
         chunk_overlap=150
     )
