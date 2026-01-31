@@ -12,6 +12,7 @@ def process_legal_pdfs(file_path):
     # Split text into manageable chunks
     # Laws need context, so we use a decent overlap
     text_splitter = RecursiveCharacterTextSplitter(
+        separators = ["\n\n", "\n", " ", ""],
         chunk_size=1000,
         chunk_overlap=150
     )

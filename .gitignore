@@ -1,2 +1,5 @@
 *.pdf
+*.jsonl
 **/**.pdf
+**/**.jsonl
+qdrant_storage/
