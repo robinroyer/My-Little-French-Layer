@@ -1,6 +1,7 @@
 import os
 import json
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
@@ -19,8 +20,31 @@ def process_legal_pdfs(file_path):
     chunks = text_splitter.split_documents(docs)
     return chunks
 
-def process_folder(input_folder, output_folder):
-    """Process all PDF files in input_folder and save results to output_folder."""
+def process_single_pdf(pdf_file, output_path):
+    """Process a single PDF file and save results to output_path."""
+    output_file = output_path / f"{pdf_file.stem}.jsonl"
+    chunk_count = 0
+
+    with open(output_file, "w", encoding="utf-8") as f:
+        for chunk in process_legal_pdfs(str(pdf_file)):
+            chunk_data = {
+                "page_content": chunk.page_content,
+                "metadata": chunk.metadata
+            }
+            f.write(json.dumps(chunk_data, ensure_ascii=False) + "\n")
+            chunk_count += 1
+
+    return pdf_file.name, output_file.name, chunk_count
+
+
+def process_folder(input_folder, output_folder, max_workers=14):
+    """Process all PDF files in input_folder and save results to output_folder.
+
+    Args:
+        input_folder: Path to folder containing PDF files
+        output_folder: Path to folder where results will be saved
+        max_workers: Maximum number of threads for parallel processing
+    """
     input_path = Path(input_folder)
     output_path = Path(output_folder)
 
@@ -34,24 +58,21 @@ def process_folder(input_folder, output_folder):
         print(f"No PDF files found in {input_folder}")
         return
 
-    for pdf_file in pdf_files:
-        print(f"Processing: {pdf_file.name}")
+    print(f"Processing {len(pdf_files)} PDF files with {max_workers} workers...")
 
-        # Save to output folder with same name but .jsonl extension
-        output_file = output_path / f"{pdf_file.stem}.jsonl"
-        chunk_count = 0
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(process_single_pdf, pdf_file, output_path): pdf_file
+            for pdf_file in pdf_files
+        }
 
-        with open(output_file, "w", encoding="utf-8") as f:
-            # Process and write chunks directly to avoid memory buildup
-            for chunk in process_legal_pdfs(str(pdf_file)):
-                chunk_data = {
-                    "page_content": chunk.page_content,
-                    "metadata": chunk.metadata
-                }
-                f.write(json.dumps(chunk_data, ensure_ascii=False) + "\n")
-                chunk_count += 1
-
-        print(f"  Saved {chunk_count} chunks to {output_file.name}")
+        for future in as_completed(futures):
+            pdf_file = futures[future]
+            try:
+                pdf_name, output_name, chunk_count = future.result()
+                print(f"  {pdf_name} -> {output_name} ({chunk_count} chunks)")
+            except Exception as e:
+                print(f"  Error processing {pdf_file.name}: {e}")
 
     print(f"\nProcessed {len(pdf_files)} files")
 

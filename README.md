@@ -25,19 +25,46 @@ python 01_extract_content/extract.py
 
 Load chunks and inject into Qdrant using [BGE embeddings](https://huggingface.co/BAAI/bge-small-en-v1.5).
 
+
 ```bash
 python 02_inject_rag/inject.py
 ```
 
-### 4. Query with RAG
+### 4. Query
 
-Chat with the legal assistant using context from the vector database.
+Query the legal assistant with optional RAG support.
 
 ```bash
-python 03_query/query.py
+# Interactive chat with RAG
+python 03_query/query.py --chat
+
+# Interactive chat without RAG (vanilla mode)
+python 03_query/query.py --chat --vanilla
+
+# Single query
+python 03_query/query.py "What is the penalty for theft?"
+
+# Pipe input/output
+echo "What is article 311-1?" | python 03_query/query.py
+
+# Use Claude instead of Ollama
+python 03_query/query.py --provider claude --chat
+
+# Custom Ollama server
+python 03_query/query.py --model llama3 --url http://localhost:11434
 ```
 
-Compare `query.py` (with RAG) and `query_vanilla.py` (without RAG) to see the difference.
+**Options:**
+
+| Flag | Description |
+|------|-------------|
+| `-c, --chat` | Interactive chat mode |
+| `-v, --vanilla` | Disable RAG (no vector store context) |
+| `-p, --provider` | LLM provider: `ollama` (default) or `claude` |
+| `-m, --model` | Model name override |
+| `-u, --url` | Ollama server URL |
+| `--qdrant-url` | Qdrant server URL |
+| `--collection` | Qdrant collection name |
 
 ## Requirements
 
