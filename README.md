@@ -66,6 +66,29 @@ python 03_query/query.py --model llama3 --url http://localhost:11434
 | `--qdrant-url` | Qdrant server URL |
 | `--collection` | Qdrant collection name |
 
+### 5. Evaluate
+
+Compare RAG vs vanilla responses to measure RAG effectiveness.
+
+```bash
+# Run evaluation with default questions
+python 04_evaluate/evaluate.py
+
+# Use Claude for evaluation
+python 04_evaluate/evaluate.py --provider claude
+
+# Skip LLM analysis
+python 04_evaluate/evaluate.py --no-analysis
+
+# Custom output file
+python 04_evaluate/evaluate.py --output my_results.md
+```
+
+Results are saved to `04_evaluate/results.md` with:
+- Side-by-side comparison table
+- Detailed responses for each question
+- LLM-generated analysis of differences
+
 ## Requirements
 
 - Qdrant running on `localhost:6333`
