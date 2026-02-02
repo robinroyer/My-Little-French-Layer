@@ -2,6 +2,10 @@
 
 A RAG (Retrieval Augmented Generation) pipeline for querying French legal documents.
 
+![Demo](french_lawyer.gif)
+
+## Architecture
+
 <img src="pipeline.png" alt="Pipeline" width="600">
 
 ## Pipeline Steps
