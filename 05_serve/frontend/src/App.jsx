@@ -8,6 +8,8 @@ export default function App() {
   const [sources, setSources] = useState({})
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [useRag, setUseRag] = useState(true)
+  const [selectedCodes, setSelectedCodes] = useState([])
 
   const sendMessage = useCallback(async (content) => {
     const timestamp = new Date().toISOString()
@@ -24,6 +26,8 @@ export default function App() {
         body: JSON.stringify({
           message: content,
           history: messages,
+          use_rag: useRag,
+          selected_codes: selectedCodes,
         }),
       })
 
@@ -65,7 +69,7 @@ export default function App() {
     } finally {
       setIsLoading(false)
     }
-  }, [messages])
+  }, [messages, useRag, selectedCodes])
 
   const clearChat = useCallback(() => {
     setMessages([])
@@ -125,6 +129,10 @@ export default function App() {
         <InputBar
           onSend={sendMessage}
           disabled={isLoading}
+          useRag={useRag}
+          onUseRagChange={setUseRag}
+          selectedCodes={selectedCodes}
+          onSelectedCodesChange={setSelectedCodes}
         />
 
         {/* Disclaimer */}

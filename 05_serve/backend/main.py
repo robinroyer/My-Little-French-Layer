@@ -61,6 +61,8 @@ class Message(BaseModel):
 class ChatRequest(BaseModel):
     message: str
     history: list[Message] = []
+    use_rag: bool = True
+    selected_codes: list[str] = []
 
 
 class SourceResponse(BaseModel):
@@ -93,13 +95,17 @@ async def chat(request: ChatRequest):
         llm = get_llm_instance()
         vector_store = get_vector_store_instance()
 
-        # Retrieve context from RAG
+        # Retrieve context from RAG if enabled
         sources = []
         context = None
 
-        if vector_store:
+        if request.use_rag and vector_store:
+            source_books = request.selected_codes if request.selected_codes else None
             context, source_objs = await asyncio.to_thread(
-                retrieve_context, vector_store, request.message
+                retrieve_context,
+                vector_store,
+                request.message,
+                source_books=source_books,
             )
             sources = [
                 SourceResponse(content=s.content, metadata=s.metadata, k=config.top_k, score_threshold=config.score_threshold)

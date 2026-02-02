@@ -1,9 +1,12 @@
 import { useState, useRef, useEffect } from 'react'
-import { motion } from 'motion/react'
+import { motion, AnimatePresence } from 'motion/react'
+import { LAW_CODES } from '../data/lawCodes'
 
-export default function InputBar({ onSend, disabled }) {
+export default function InputBar({ onSend, disabled, useRag, onUseRagChange, selectedCodes, onSelectedCodesChange }) {
   const [message, setMessage] = useState('')
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const textareaRef = useRef(null)
+  const dropdownRef = useRef(null)
 
   // Auto-resize textarea
   useEffect(() => {
@@ -18,6 +21,25 @@ export default function InputBar({ onSend, disabled }) {
   useEffect(() => {
     textareaRef.current?.focus()
   }, [])
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setIsDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const toggleCode = (codeId) => {
+    if (selectedCodes.includes(codeId)) {
+      onSelectedCodesChange(selectedCodes.filter((id) => id !== codeId))
+    } else {
+      onSelectedCodesChange([...selectedCodes, codeId])
+    }
+  }
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -102,13 +124,95 @@ export default function InputBar({ onSend, disabled }) {
           </motion.button>
         </div>
 
-        {/* Helper text */}
-        <p className="mt-2 text-center text-[11px] text-legal-mist font-sans">
-          <span className="hidden sm:inline">
-            Utilisez <kbd className="px-1.5 py-0.5 bg-stone-150 rounded text-[10px] font-medium">Shift + Entree</kbd> pour un saut de ligne
-          </span>
-          <span className="sm:hidden">Appuyez sur le bouton pour envoyer</span>
-        </p>
+        {/* RAG toggle and codes selector */}
+        <div className="mt-2 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 flex-wrap">
+            <label className="flex items-center gap-2 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={useRag}
+                onChange={(e) => onUseRagChange(e.target.checked)}
+                className="w-4 h-4 rounded border-stone-300 text-legal-navy focus:ring-legal-gold/50 cursor-pointer"
+              />
+              <span className="text-[11px] text-legal-mist font-sans group-hover:text-legal-ink transition-colors">
+                Contexte juridique
+              </span>
+            </label>
+
+            {/* Codes dropdown */}
+            {useRag && (
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-sans bg-stone-100 hover:bg-stone-200 rounded-lg border border-stone-250 transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5 text-legal-mist" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                  <span className="text-legal-ink">
+                    {selectedCodes.length === 0
+                      ? 'Tous les codes'
+                      : `${selectedCodes.length} code${selectedCodes.length > 1 ? 's' : ''}`}
+                  </span>
+                  <svg className={`w-3 h-3 text-legal-mist transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                <AnimatePresence>
+                  {isDropdownOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute bottom-full left-0 mb-2 w-72 max-h-64 overflow-y-auto bg-white rounded-xl border border-stone-200 shadow-legal-lg z-50"
+                    >
+                      <div className="p-2 border-b border-stone-100 flex justify-between items-center">
+                        <span className="text-[11px] font-medium text-legal-ink">Filtrer par code</span>
+                        {selectedCodes.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => onSelectedCodesChange([])}
+                            className="text-[10px] text-legal-mist hover:text-legal-ink transition-colors"
+                          >
+                            Effacer
+                          </button>
+                        )}
+                      </div>
+                      <div className="p-1">
+                        {LAW_CODES.map((code) => (
+                          <label
+                            key={code.id}
+                            className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-stone-50 cursor-pointer transition-colors"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedCodes.includes(code.id)}
+                              onChange={() => toggleCode(code.id)}
+                              className="w-3.5 h-3.5 rounded border-stone-300 text-legal-navy focus:ring-legal-gold/50 cursor-pointer"
+                            />
+                            <span className="text-[11px] text-legal-ink font-sans truncate">
+                              {code.name}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
+          </div>
+
+          <p className="text-[11px] text-legal-mist font-sans flex-shrink-0">
+            <span className="hidden sm:inline">
+              <kbd className="px-1.5 py-0.5 bg-stone-150 rounded text-[10px] font-medium">Shift + Entree</kbd> saut de ligne
+            </span>
+            <span className="sm:hidden">Appuyez pour envoyer</span>
+          </p>
+        </div>
       </form>
     </motion.div>
   )

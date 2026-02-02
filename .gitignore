@@ -53,3 +53,6 @@ env/
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Node.js
+node_modules/

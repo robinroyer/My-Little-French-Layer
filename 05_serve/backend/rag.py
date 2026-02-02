@@ -4,6 +4,7 @@ from langchain_qdrant import QdrantVectorStore
 from langchain_huggingface import HuggingFaceEmbeddings
 from qdrant_client import QdrantClient
 from qdrant_client.http.exceptions import UnexpectedResponse
+from qdrant_client.models import Filter, FieldCondition, MatchAny
 
 from config import config
 
@@ -39,12 +40,40 @@ def check_qdrant_health() -> bool:
         return False
 
 
-def retrieve_context(vector_store: QdrantVectorStore, query: str, k: int = 3, score_threshold: float = 0.7) -> tuple[str, list[Source]]:
-    """Retrieve relevant documents and return context string with sources."""
+def retrieve_context(
+    vector_store: QdrantVectorStore,
+    query: str,
+    k: int = 3,
+    score_threshold: float = 0.7,
+    source_books: list[str] | None = None,
+) -> tuple[str, list[Source]]:
+    """Retrieve relevant documents and return context string with sources.
+
+    Args:
+        vector_store: The Qdrant vector store instance.
+        query: The search query.
+        k: Number of results to return.
+        score_threshold: Minimum similarity score.
+        source_books: Optional list of source_book values to filter by.
+    """
+    # Build filter if source_books are specified
+    qdrant_filter = None
+    if source_books:
+        qdrant_filter = Filter(
+            must=[
+                FieldCondition(
+                    key="metadata.source_book",
+                    match=MatchAny(any=source_books),
+                )
+            ]
+        )
+
     docs = vector_store.similarity_search(
         query,
         score_threshold=score_threshold,
-        k=k)
+        k=k,
+        filter=qdrant_filter,
+    )
 
     sources = [
         Source(
