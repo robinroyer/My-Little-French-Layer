@@ -15,6 +15,7 @@ class Source:
 
     content: str
     metadata: dict
+    score: float = 0.0
 
 
 def get_vector_store() -> QdrantVectorStore | None:
@@ -43,8 +44,7 @@ def check_qdrant_health() -> bool:
 def retrieve_context(
     vector_store: QdrantVectorStore,
     query: str,
-    k: int = 3,
-    score_threshold: float = 0.7,
+    k: int = 5,
     source_books: list[str] | None = None,
 ) -> tuple[str, list[Source]]:
     """Retrieve relevant documents and return context string with sources.
@@ -68,22 +68,23 @@ def retrieve_context(
             ]
         )
 
-    docs = vector_store.similarity_search(
+    docs_with_scores = vector_store.similarity_search_with_score(
         query,
-        score_threshold=score_threshold,
         k=k,
         filter=qdrant_filter,
     )
 
+    # Build sources from results
     sources = [
         Source(
             content=doc.page_content,
             metadata=doc.metadata or {},
+            score=score,
         )
-        for doc in docs
+        for doc, score in docs_with_scores
     ]
 
-    context = "\n\n---\n\n".join([doc.page_content for doc in docs])
+    context = "\n\n---\n\n".join([doc.page_content for doc, _ in docs_with_scores])
     return context, sources
 
 

@@ -1,10 +1,19 @@
 """FastAPI application for My Little French Lawyer."""
 import asyncio
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Response
+
+# Configure logging for telemetry
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger("mlfl")
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -68,8 +77,7 @@ class ChatRequest(BaseModel):
 class SourceResponse(BaseModel):
     content: str
     metadata: dict
-    k: int
-    score_threshold: float
+    score: float
 
 
 class ChatResponse(BaseModel):
@@ -99,18 +107,44 @@ async def chat(request: ChatRequest):
         sources = []
         context = None
 
+        # Telemetry: Log request info
+        logger.info("=" * 60)
+        logger.info(f"📝 QUERY: {request.message[:100]}{'...' if len(request.message) > 100 else ''}")
+        logger.info(f"🔧 RAG ENABLED: {request.use_rag}")
+        if request.selected_codes:
+            logger.info(f"📚 SELECTED CODES: {request.selected_codes}")
+
         if request.use_rag and vector_store:
             source_books = request.selected_codes if request.selected_codes else None
             context, source_objs = await asyncio.to_thread(
                 retrieve_context,
                 vector_store,
                 request.message,
+                k=config.top_k,
                 source_books=source_books,
             )
             sources = [
-                SourceResponse(content=s.content, metadata=s.metadata, k=config.top_k, score_threshold=config.score_threshold)
+                SourceResponse(
+                    content=s.content,
+                    metadata=s.metadata,
+                    score=s.score,
+                )
                 for s in source_objs
             ]
+
+            # Telemetry: Log RAG results
+            logger.info(f"📊 RAG RESULTS: {len(sources)} sources found")
+            for i, src in enumerate(source_objs, 1):
+                source_name = src.metadata.get("source", src.metadata.get("filename", "Unknown"))
+                logger.info(f"   [{i}] Score: {src.score:.4f} | Source: {source_name}")
+                logger.info(f"       Preview: {src.content[:80]}...")
+
+            if context:
+                logger.info(f"📄 CONTEXT LENGTH: {len(context)} chars")
+            else:
+                logger.info("⚠️  NO CONTEXT RETRIEVED")
+        else:
+            logger.info("🚫 RAG SKIPPED (disabled or vector store unavailable)")
 
         # Build prompt with history
         history_dicts = [{"role": m.role, "content": m.content} for m in request.history]
@@ -119,9 +153,13 @@ async def chat(request: ChatRequest):
         # Get LLM response
         response_text = await asyncio.to_thread(invoke_llm, llm, prompt)
 
+        logger.info(f"✅ RESPONSE LENGTH: {len(response_text)} chars")
+        logger.info("=" * 60)
+
         return ChatResponse(response=response_text, sources=sources)
 
     except Exception as e:
+        logger.error(f"❌ ERROR: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error processing request: {str(e)}")
 
 

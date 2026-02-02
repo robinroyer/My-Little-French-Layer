@@ -21,7 +21,6 @@ class Config:
 
     # Rag research parameters
     top_k: int = 5
-    score_threshold: float = 0.5
 
     # Server Configuration
     host: str = "0.0.0.0"
@@ -43,7 +42,6 @@ class Config:
             qdrant_url=os.getenv("QDRANT_URL", "http://localhost:6333"),
             qdrant_collection=os.getenv("QDRANT_COLLECTION", "law_library"),
             top_k=int(os.getenv("RAG_TOP_K", "5")),
-            score_threshold=float(os.getenv("RAG_SCORE_THRESHOLD", "0.7")),
             host=os.getenv("HOST", "0.0.0.0"),
             port=int(os.getenv("PORT", "8080")),
         )
