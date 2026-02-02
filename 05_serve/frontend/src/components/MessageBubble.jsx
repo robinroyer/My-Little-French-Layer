@@ -1,4 +1,5 @@
 import { motion } from 'motion/react'
+import ReactMarkdown from 'react-markdown'
 
 export default function MessageBubble({ message, sources, isLatest }) {
   const isUser = message.role === 'user'
@@ -26,12 +27,34 @@ export default function MessageBubble({ message, sources, isLatest }) {
           )}
 
           {/* Message content */}
-          <div className={`relative ${!isUser ? 'prose prose-sm prose-legal' : ''}`}>
-            {message.content.split('\n').map((paragraph, idx) => (
-              <p key={idx} className={idx > 0 ? 'mt-2' : ''}>
-                {paragraph}
-              </p>
-            ))}
+          <div className={`relative ${!isUser ? 'prose prose-sm prose-legal max-w-none' : ''}`}>
+            {isUser ? (
+              message.content.split('\n').map((paragraph, idx) => (
+                <p key={idx} className={idx > 0 ? 'mt-2' : ''}>
+                  {paragraph}
+                </p>
+              ))
+            ) : (
+              <ReactMarkdown
+                components={{
+                  h1: ({ children }) => <h1 className="text-lg font-bold mt-3 mb-2">{children}</h1>,
+                  h2: ({ children }) => <h2 className="text-base font-bold mt-3 mb-2">{children}</h2>,
+                  h3: ({ children }) => <h3 className="text-sm font-bold mt-2 mb-1">{children}</h3>,
+                  p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                  ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
+                  ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
+                  li: ({ children }) => <li className="ml-2">{children}</li>,
+                  strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                  em: ({ children }) => <em className="italic">{children}</em>,
+                  code: ({ children }) => <code className="bg-stone-200 px-1 py-0.5 rounded text-sm font-mono">{children}</code>,
+                  pre: ({ children }) => <pre className="bg-stone-200 p-2 rounded my-2 overflow-x-auto text-sm">{children}</pre>,
+                  blockquote: ({ children }) => <blockquote className="border-l-2 border-legal-gold pl-3 my-2 italic text-legal-steel">{children}</blockquote>,
+                  a: ({ href, children }) => <a href={href} className="text-legal-gold hover:underline" target="_blank" rel="noopener noreferrer">{children}</a>,
+                }}
+              >
+                {message.content}
+              </ReactMarkdown>
+            )}
           </div>
         </div>
 
@@ -69,17 +92,42 @@ export default function MessageBubble({ message, sources, isLatest }) {
 
 function SourceChip({ index, source }) {
   const hasMetadata = source.metadata && Object.keys(source.metadata).length > 0
+  const sourceUrl = source.metadata?.source_url
+
+  const ChipContent = () => (
+    <>
+      <span className="w-4 h-4 flex items-center justify-center bg-legal-gold/20 text-legal-gold rounded text-[10px] font-semibold">
+        {index}
+      </span>
+      <span className="max-w-[120px] truncate">
+        {source.metadata?.source || source.metadata?.filename || `Source ${index}`}
+      </span>
+      {sourceUrl && (
+        <svg className="w-3 h-3 ml-0.5 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+        </svg>
+      )}
+    </>
+  )
+
+  const chipClassName = "inline-flex items-center gap-1 px-2 py-1 text-xs font-sans bg-stone-150 text-legal-slate rounded-md border border-stone-250 hover:bg-stone-250 hover:border-legal-mist transition-all duration-200"
 
   return (
     <div className="group relative">
-      <button className="inline-flex items-center gap-1 px-2 py-1 text-xs font-sans bg-stone-150 text-legal-slate rounded-md border border-stone-250 hover:bg-stone-250 hover:border-legal-mist transition-all duration-200">
-        <span className="w-4 h-4 flex items-center justify-center bg-legal-gold/20 text-legal-gold rounded text-[10px] font-semibold">
-          {index}
+      {sourceUrl ? (
+        <a
+          href={sourceUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={chipClassName}
+        >
+          <ChipContent />
+        </a>
+      ) : (
+        <span className={chipClassName}>
+          <ChipContent />
         </span>
-        <span className="max-w-[120px] truncate">
-          {source.metadata?.source || source.metadata?.filename || `Source ${index}`}
-        </span>
-      </button>
+      )}
 
       {/* Tooltip with source preview */}
       <div className="absolute bottom-full left-0 mb-2 w-72 p-3 bg-white rounded-lg shadow-legal-lg border border-stone-250 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none">
