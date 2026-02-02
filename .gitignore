@@ -56,3 +56,18 @@ htmlcov/
 
 # Node.js
 node_modules/
+**/node_modules/
+.npm
+.pnpm-store/
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# Build outputs
+dist/
+.next/
+.nuxt/
+.output/
+
+# Vite
+.vite/
