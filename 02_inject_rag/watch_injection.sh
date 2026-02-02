@@ -5,10 +5,10 @@ GREEN='\033[32m'
 RESET='\033[0m'
 
 # Calculate total documents to inject from JSONL files
-TOTAL=$(cat 01_extract_content/output/*.jsonl 2>/dev/null | wc -l)
+TOTAL=$(cat 01_clean/02_structured/*.jsonl 2>/dev/null | wc -l)
 
 if [ "$TOTAL" -eq 0 ]; then
-    echo "No documents found in 01_extract_content/output/*.jsonl"
+    echo "No documents found in 01_clean/02_structured/*.jsonl"
     exit 1
 fi
 

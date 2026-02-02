@@ -39,13 +39,16 @@ def check_qdrant_health() -> bool:
         return False
 
 
-def retrieve_context(vector_store: QdrantVectorStore, query: str, k: int = 3) -> tuple[str, list[Source]]:
+def retrieve_context(vector_store: QdrantVectorStore, query: str, k: int = 3, score_threshold: float = 0.7) -> tuple[str, list[Source]]:
     """Retrieve relevant documents and return context string with sources."""
-    docs = vector_store.similarity_search(query, k=k)
+    docs = vector_store.similarity_search(
+        query,
+        score_threshold=score_threshold,
+        k=k)
 
     sources = [
         Source(
-            content=doc.page_content[:500],  # Truncate for display
+            content=doc.page_content,
             metadata=doc.metadata or {},
         )
         for doc in docs
@@ -57,18 +60,26 @@ def retrieve_context(vector_store: QdrantVectorStore, query: str, k: int = 3) ->
 
 def build_prompt(query: str, context: str | None = None, history: list[dict] | None = None) -> str:
     """Build the prompt for the LLM."""
-    system_prompt = """Tu es un assistant juridique français. Tu aides les utilisateurs à comprendre le droit français.
-Réponds aux questions de manière claire et précise. Si tu cites des articles ou des lois spécifiques, sois précis.
-Réponds toujours dans la même langue que la question de l'utilisateur."""
+    system_prompt = """Tu es un assistant juridique français spécialisé dans le conseil et l'analyse de textes légaux.
+    Ta mission est d'aider les utilisateurs à comprendre le droit français avec rigueur et précision.
+
+    RÈGLES CRITIQUES :
+    1. ANALYSE DU CONTEXTE : Examine si les extraits fournis sont réellement pertinents par rapport à la question.
+    2. PORTE DE SORTIE : Si le contexte fourni est hors-sujet, incomplet ou n'a aucun rapport direct avec la requête, ne tente pas d'inventer une réponse. Dis explicitement que les documents à ta disposition ne permettent pas de répondre précisément.
+    3. REQUÊTES COURTES : Si la question est trop vague (ex: un seul mot), demande à l'utilisateur de préciser sa situation juridique avant d'utiliser le contexte.
+    4. FIDÉLITÉ : Ne cite des articles que s'ils figurent dans le contexte ou si tu es certain de leur application exacte.
+
+    Réponds toujours dans la même langue que l'utilisateur."""
 
     if context:
         system_prompt += f"""
+    ---
+    CONTEXTE JURIDIQUE À UTILISER PRIORITAIREMENT :
+    {context}
+    ---
+    INSTRUCTION FINALE : Si le contexte ci-dessus ne contient pas la solution spécifique à la question, réponds : "D'après les documents consultés, je ne dispose pas d'assez d'informations pour répondre précisément. Pourriez-vous clarifier votre demande ?"."""
+        
 
-Utilise les extraits de documents juridiques suivants pour informer ta réponse.
-Si la réponse n'est pas clairement étayée par le contexte fourni, reconnais cette limitation.
-
-Contexte:
-{context}"""
 
     # Build conversation history
     messages = [system_prompt]

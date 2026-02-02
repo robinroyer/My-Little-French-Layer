@@ -19,6 +19,10 @@ class Config:
     qdrant_url: str = "http://localhost:6333"
     qdrant_collection: str = "law_library"
 
+    # Rag research parameters
+    top_k: int = 5
+    score_threshold: float = 0.5
+
     # Server Configuration
     host: str = "0.0.0.0"
     port: int = 8080
@@ -26,14 +30,20 @@ class Config:
     @classmethod
     def from_env(cls) -> "Config":
         """Load configuration from environment variables."""
+        llm_provider_str = os.getenv("LLM_PROVIDER", "ollama")
+        if llm_provider_str not in ("ollama", "claude"):
+            llm_provider_str = "ollama"
+        
         return cls(
-            llm_provider=os.getenv("LLM_PROVIDER", "ollama"),
+            llm_provider=llm_provider_str,
             ollama_url=os.getenv("OLLAMA_URL", "http://localhost:11434"),
             ollama_model=os.getenv("OLLAMA_MODEL", "qwen3:4b"),
             anthropic_api_key=os.getenv("ANTHROPIC_API_KEY"),
             claude_model=os.getenv("CLAUDE_MODEL", "claude-sonnet-4-20250514"),
             qdrant_url=os.getenv("QDRANT_URL", "http://localhost:6333"),
             qdrant_collection=os.getenv("QDRANT_COLLECTION", "law_library"),
+            top_k=int(os.getenv("RAG_TOP_K", "5")),
+            score_threshold=float(os.getenv("RAG_SCORE_THRESHOLD", "0.7")),
             host=os.getenv("HOST", "0.0.0.0"),
             port=int(os.getenv("PORT", "8080")),
         )

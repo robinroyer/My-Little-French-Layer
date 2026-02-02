@@ -66,6 +66,8 @@ class ChatRequest(BaseModel):
 class SourceResponse(BaseModel):
     content: str
     metadata: dict
+    k: int
+    score_threshold: float
 
 
 class ChatResponse(BaseModel):
@@ -100,7 +102,7 @@ async def chat(request: ChatRequest):
                 retrieve_context, vector_store, request.message
             )
             sources = [
-                SourceResponse(content=s.content, metadata=s.metadata)
+                SourceResponse(content=s.content, metadata=s.metadata, k=config.top_k, score_threshold=config.score_threshold)
                 for s in source_objs
             ]
 
