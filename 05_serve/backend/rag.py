@@ -62,7 +62,7 @@ def retrieve_context(
         qdrant_filter = Filter(
             must=[
                 FieldCondition(
-                    key="metadata.source_book",
+                    key="metadata.legitext_id",
                     match=MatchAny(any=source_books),
                 )
             ]
